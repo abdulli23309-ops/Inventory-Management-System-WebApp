@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using Inventory.Application.DTOs;
 using Inventory.Application.Entities;
 using Inventory.Application.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Inventory.API.Controllers
 {
@@ -23,7 +24,7 @@ namespace Inventory.API.Controllers
         public async Task<ActionResult<IEnumerable<Product>>> GetAll()
         {
             var products = await _productService.GetAllProductsAsync();
-            return Ok(products); // Returns 200 OK status with the products list
+            return Ok(products);
         }
 
         // GET: api/products/5
@@ -31,40 +32,63 @@ namespace Inventory.API.Controllers
         public async Task<ActionResult<Product>> GetById(int id)
         {
             var product = await _productService.GetProductByIdAsync(id);
+
             if (product == null)
             {
-                return NotFound($"Product with ID {id} not found."); // Returns 404 Not Found
+                return NotFound($"Product with ID {id} not found.");
             }
+
             return Ok(product);
         }
 
         // POST: api/products
         [HttpPost]
-        public async Task<ActionResult> Create([FromBody] Product product)
+        public async Task<ActionResult> Create([FromBody] CreateProductDto dto)
         {
             try
             {
+                var product = new Product
+                {
+                    Name = dto.Name,
+                    SKU = dto.SKU,
+                    Price = dto.Price,
+                    CategoryId = dto.CategoryId,
+                    SupplierId = dto.SupplierId
+                };
+
                 await _productService.AddProductAsync(product);
-                // Returns 201 Created status and tells client where to fetch the new product
-                return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = product.Id },
+                    product);
             }
-            catch (System.ArgumentException ex)
+            catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message); // Returns 400 Bad Request if validation fails
+                return BadRequest(ex.Message);
             }
         }
 
         // PUT: api/products/5
         [HttpPut("{id}")]
-        public async Task<ActionResult> Update(int id, [FromBody] Product product)
+        public async Task<ActionResult> Update(int id, [FromBody] UpdateProductDto dto)
         {
-            if (id != product.Id)
+            var product = await _productService.GetProductByIdAsync(id);
+
+            if (product == null)
             {
-                return BadRequest("ID mismatch between URL path and body data.");
+                return NotFound($"Product with ID {id} not found.");
             }
 
+            product.Name = dto.Name;
+            product.SKU = dto.SKU;
+            product.Price = dto.Price;
+            product.CategoryId = dto.CategoryId;
+            product.SupplierId = dto.SupplierId;
+
             await _productService.UpdateProductAsync(product);
-            return NoContent(); // Returns 204 No Content indicating success with no payload returned
+
+            return NoContent();
         }
 
         // DELETE: api/products/5
@@ -72,12 +96,14 @@ namespace Inventory.API.Controllers
         public async Task<ActionResult> Delete(int id)
         {
             var existingProduct = await _productService.GetProductByIdAsync(id);
+
             if (existingProduct == null)
             {
                 return NotFound($"Product with ID {id} not found.");
             }
 
-            await _productService.DeleteProductAsync(id); // Using the base CRUD Repository method via Service
+            await _productService.DeleteProductAsync(id);
+
             return NoContent();
         }
 

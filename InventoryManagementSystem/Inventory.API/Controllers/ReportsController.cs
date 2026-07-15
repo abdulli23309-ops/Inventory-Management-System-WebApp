@@ -4,6 +4,7 @@ using Inventory.Application.Interfaces;
 using Inventory.Application.Enums;
 using Inventory.Application.Interfaces.Reports;
 using Microsoft.Extensions.DependencyInjection;
+using Inventory.Application.DTOs;
 
 namespace Inventory.API.Controllers
 {

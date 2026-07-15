@@ -1,12 +1,15 @@
-﻿using Inventory.Application.Entities;
+﻿using Inventory.Application.DTOs;
+using Inventory.Application.Entities;
 using Inventory.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Inventory.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class PurchasesController : Controller
+    public class PurchasesController : ControllerBase
     {
         private readonly IPurchaseService _purchaseService;
 
@@ -21,7 +24,7 @@ namespace Inventory.API.Controllers
         public async Task<ActionResult<IEnumerable<Purchase>>> GetAll()
         {
             var purchases = await _purchaseService.GetAllPurchasesAsync();
-            return Ok(purchases); // Returns 200 OK status with the purchases list
+            return Ok(purchases);
         }
 
         // GET: api/purchases/5
@@ -29,40 +32,67 @@ namespace Inventory.API.Controllers
         public async Task<ActionResult<Purchase>> GetById(int id)
         {
             var purchase = await _purchaseService.GetPurchaseByIdAsync(id);
+
             if (purchase == null)
             {
-                return NotFound($"Purchase with ID {id} not found."); // Returns 404 Not Found
+                return NotFound($"Purchase with ID {id} not found.");
             }
+
             return Ok(purchase);
         }
 
         // POST: api/purchases
         [HttpPost]
-        public async Task<ActionResult> Create([FromBody] Purchase purchase)
+        public async Task<ActionResult> Create([FromBody] CreatePurchaseDto dto)
         {
             try
             {
+                var purchase = new Purchase
+                {
+                    PurchaseDate = dto.PurchaseDate,
+                    SupplierId = dto.SupplierId
+                };
+
+                foreach (var item in dto.Details)
+                {
+                    purchase.AddDetail(new PurchaseDetail
+                    {
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice
+                    });
+                }
+
                 await _purchaseService.AddPurchaseAsync(purchase);
-                // Returns 201 Created status and tells client where to fetch the new purchase
-                return CreatedAtAction(nameof(GetById), new { id = purchase.Id }, purchase);
+
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = purchase.Id },
+                    purchase);
             }
-            catch (System.ArgumentException ex)
+            catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message); // Returns 400 Bad Request if validation fails
+                return BadRequest(ex.Message);
             }
         }
 
         // PUT: api/purchases/5
         [HttpPut("{id}")]
-        public async Task<ActionResult> Update(int id, [FromBody] Purchase purchase)
+        public async Task<ActionResult> Update(int id, [FromBody] UpdatePurchaseDto dto)
         {
-            if (id != purchase.Id)
+            var purchase = await _purchaseService.GetPurchaseByIdAsync(id);
+
+            if (purchase == null)
             {
-                return BadRequest("ID mismatch between URL path and body data.");
+                return NotFound($"Purchase with ID {id} not found.");
             }
 
+            purchase.PurchaseDate = dto.PurchaseDate;
+            purchase.SupplierId = dto.SupplierId;
+
             await _purchaseService.UpdatePurchaseAsync(purchase);
-            return NoContent(); // Returns 204 No Content indicating success with no payload returned
+
+            return NoContent();
         }
 
         // DELETE: api/purchases/5
@@ -70,16 +100,15 @@ namespace Inventory.API.Controllers
         public async Task<ActionResult> Delete(int id)
         {
             var existingPurchase = await _purchaseService.GetPurchaseByIdAsync(id);
+
             if (existingPurchase == null)
             {
                 return NotFound($"Purchase with ID {id} not found.");
             }
 
-            await _purchaseService.DeletePurchaseAsync(id); // Using the base CRUD Repository method via Service
+            await _purchaseService.DeletePurchaseAsync(id);
+
             return NoContent();
         }
-
-        
     }
 }
-

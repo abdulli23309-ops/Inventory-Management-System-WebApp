@@ -1,87 +1,104 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using Inventory.Application.DTOs;
 using Inventory.Application.Entities;
 using Inventory.Application.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Inventory.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class CategoriesController : Controller
+    public class CategoriesController : ControllerBase
     {
-        private readonly ICategoryService _productService;
+        private readonly ICategoryService _categoryService;
 
         // Constructor Injection: Ask the IoC Container for the Service
         public CategoriesController(ICategoryService categoryService)
         {
-            _productService = categoryService;
+            _categoryService = categoryService;
         }
 
         // GET: api/categories
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Category>>> GetAll()
         {
-            var categories = await _productService.GetAllCategoriesAsync();
-            return Ok(categories); // Returns 200 OK status with the categories list
+            var categories = await _categoryService.GetAllCategoriesAsync();
+            return Ok(categories);
         }
 
         // GET: api/categories/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Category>> GetById(int id)
         {
-            var category = await _productService.GetCategoryByIdAsync(id);
+            var category = await _categoryService.GetCategoryByIdAsync(id);
+
             if (category == null)
             {
-                return NotFound($"Category with ID {id} not found."); // Returns 404 Not Found
+                return NotFound($"Category with ID {id} not found.");
             }
+
             return Ok(category);
         }
 
         // POST: api/categories
         [HttpPost]
-        public async Task<ActionResult> Create([FromBody] Category category)
+        public async Task<ActionResult> Create([FromBody] CreateCategoryDto dto)
         {
             try
             {
-                await _productService.AddCategoryAsync(category);
-                // Returns 201 Created status and tells client where to fetch the new category
-                return CreatedAtAction(nameof(GetById), new { id = category.Id }, category);
+                var category = new Category
+                {
+                    Name = dto.Name,
+                    Description = dto.Description
+                };
+
+                await _categoryService.AddCategoryAsync(category);
+
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = category.Id },
+                    category);
             }
-            catch (System.ArgumentException ex)
+            catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message); // Returns 400 Bad Request if validation fails
+                return BadRequest(ex.Message);
             }
         }
 
         // PUT: api/categories/5
         [HttpPut("{id}")]
-        public async Task<ActionResult> Update(int id, [FromBody] Category category)
+        public async Task<ActionResult> Update(int id, [FromBody] UpdateCategoryDto dto)
         {
-            if (id != category.Id)
+            var category = await _categoryService.GetCategoryByIdAsync(id);
+
+            if (category == null)
             {
-                return BadRequest("ID mismatch between URL path and body data.");
+                return NotFound($"Category with ID {id} not found.");
             }
 
-            await _productService.UpdateCategoryAsync(category);
-            return NoContent(); // Returns 204 No Content indicating success with no payload returned
+            category.Name = dto.Name;
+            category.Description = dto.Description;
+
+            await _categoryService.UpdateCategoryAsync(category);
+
+            return NoContent();
         }
 
         // DELETE: api/categories/5
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
-            var existingCategory = await _productService.GetCategoryByIdAsync(id);
+            var existingCategory = await _categoryService.GetCategoryByIdAsync(id);
+
             if (existingCategory == null)
             {
                 return NotFound($"Category with ID {id} not found.");
             }
 
-            await _productService.DeleteCategoryAsync(id); // Using the base CRUD Repository method via Service
+            await _categoryService.DeleteCategoryAsync(id);
+
             return NoContent();
         }
-
-        
     }
 }
-

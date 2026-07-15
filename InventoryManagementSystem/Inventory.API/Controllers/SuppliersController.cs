@@ -1,12 +1,15 @@
-﻿using Inventory.Application.Entities;
+﻿using Inventory.Application.DTOs;
+using Inventory.Application.Entities;
 using Inventory.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Inventory.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class SuppliersController : Controller
+    public class SuppliersController : ControllerBase
     {
         private readonly ISupplierService _supplierService;
 
@@ -21,48 +24,67 @@ namespace Inventory.API.Controllers
         public async Task<ActionResult<IEnumerable<Supplier>>> GetAll()
         {
             var suppliers = await _supplierService.GetAllSuppliersAsync();
-            return Ok(suppliers); // Returns 200 OK status with the suppliers  list
+            return Ok(suppliers);
         }
 
-        // GET: api/products/5
+        // GET: api/suppliers/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Supplier>> GetById(int id)
         {
             var supplier = await _supplierService.GetSupplierByIdAsync(id);
+
             if (supplier == null)
             {
-                return NotFound($"Supplier with ID {id} not found."); // Returns 404 Not Found
+                return NotFound($"Supplier with ID {id} not found.");
             }
+
             return Ok(supplier);
         }
 
         // POST: api/suppliers
         [HttpPost]
-        public async Task<ActionResult> Create([FromBody] Supplier supplier)
+        public async Task<ActionResult> Create([FromBody] CreateSupplierDto dto)
         {
             try
             {
+                var supplier = new Supplier
+                {
+                    Name = dto.Name,
+                    Phone = dto.Phone,
+                    Email = dto.Email
+                };
+
                 await _supplierService.AddSupplierAsync(supplier);
-                // Returns 201 Created status and tells client where to fetch the new supplier
-                return CreatedAtAction(nameof(GetById), new { id = supplier.Id }, supplier);
+
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = supplier.Id },
+                    supplier);
             }
-            catch (System.ArgumentException ex)
+            catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message); // Returns 400 Bad Request if validation fails
+                return BadRequest(ex.Message);
             }
         }
 
         // PUT: api/suppliers/5
         [HttpPut("{id}")]
-        public async Task<ActionResult> Update(int id, [FromBody] Supplier supplier)
+        public async Task<ActionResult> Update(int id, [FromBody] UpdateSupplierDto dto)
         {
-            if (id != supplier.Id)
+            var supplier = await _supplierService.GetSupplierByIdAsync(id);
+
+            if (supplier == null)
             {
-                return BadRequest("ID mismatch between URL path and body data.");
+                return NotFound($"Supplier with ID {id} not found.");
             }
 
+            supplier.Name = dto.Name;
+            supplier.Phone = dto.Phone;
+            supplier.Email = dto.Email;
+
             await _supplierService.UpdateSupplierAsync(supplier);
-            return NoContent(); // Returns 204 No Content indicating success with no payload returned
+
+            return NoContent();
         }
 
         // DELETE: api/suppliers/5
@@ -70,16 +92,15 @@ namespace Inventory.API.Controllers
         public async Task<ActionResult> Delete(int id)
         {
             var existingSupplier = await _supplierService.GetSupplierByIdAsync(id);
+
             if (existingSupplier == null)
             {
                 return NotFound($"Supplier with ID {id} not found.");
             }
 
-            await _supplierService.DeleteSupplierAsync(id); // Using the base CRUD Repository method via Service
+            await _supplierService.DeleteSupplierAsync(id);
+
             return NoContent();
         }
-
-        
     }
-
 }
