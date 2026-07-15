@@ -3,8 +3,11 @@ using Inventory.Application.Interfaces;
 using Inventory.Application.Services;
 using Inventory.Infrastructure.Data;
 using Inventory.Infrastructure.Repositories;
-using Microsoft.AspNetCore.Mvc;   
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Inventory.Application.Enums; // Added for ReportFormat enum
+using Inventory.Application.Interfaces.Reports; // Added for Abstract Factory DI
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -19,8 +22,15 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
 builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
+
 builder.Services.AddSingleton<IInvoiceFactory, InvoiceFactory>();
 builder.Services.AddScoped<IInventoryReportRepository, DapperInventoryReportRepository>();
+
+// ==========================================
+// ABSTRACT FACTORY KEYED DI REGISTRATIONS
+// ==========================================
+builder.Services.AddKeyedSingleton<IReportFactory, ExcelReportFactory>(ReportFormat.Excel);
+builder.Services.AddKeyedSingleton<IReportFactory, PdfReportFactory>(ReportFormat.Pdf);
 
 builder.Services.AddControllers(options =>
 {
@@ -30,21 +40,22 @@ builder.Services.AddControllers(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
-// 1. Define a CORS policy
+
+// Define a CORS policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins("http://localhost:5173") // The default port for Vite/React
+        policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
 });
 
 builder.Services.AddEndpointsApiExplorer();
-
 builder.Services.AddSwaggerGen();
-builder.Services.AddDbContext<ApplicationDbContext>(options =>options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
@@ -58,7 +69,5 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors("AllowReactApp");
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
