@@ -1,0 +1,40 @@
+## ===== .NET / Visual Studio (backend/) =====
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# EF Core / local DB files
+*.mdf
+*.ldf
+*.ndf
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+## ===== Node / React / Vite (frontend/) =====
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+## ===== OS =====
+.DS_Store
+Thumbs.db
